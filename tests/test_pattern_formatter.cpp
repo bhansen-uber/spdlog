@@ -67,7 +67,7 @@ TEST_CASE("color range test1", "[pattern_formatter]")
     fmt::format_to(buf, "Hello");
     memory_buf_t formatted;
     std::string logger_name = "test";
-    spdlog::details::log_msg msg(logger_name, spdlog::level::info, spdlog::string_view_t(buf.data(), buf.size()));
+    spdlog::details::log_msg msg(logger_name, spdlog::level::info, nullptr, spdlog::string_view_t(buf.data(), buf.size()));
     formatter->format(msg, formatted);
     REQUIRE(msg.color_range_start == 0);
     REQUIRE(msg.color_range_end == 5);
@@ -78,7 +78,7 @@ TEST_CASE("color range test2", "[pattern_formatter]")
 {
     auto formatter = std::make_shared<spdlog::pattern_formatter>("%^%$", spdlog::pattern_time_type::local, "\n");
     std::string logger_name = "test";
-    spdlog::details::log_msg msg(logger_name, spdlog::level::info, "");
+    spdlog::details::log_msg msg(logger_name, spdlog::level::info, nullptr, "");
     memory_buf_t formatted;
     formatter->format(msg, formatted);
     REQUIRE(msg.color_range_start == 0);
@@ -90,7 +90,7 @@ TEST_CASE("color range test3", "[pattern_formatter]")
 {
     auto formatter = std::make_shared<spdlog::pattern_formatter>("%^***%$");
     std::string logger_name = "test";
-    spdlog::details::log_msg msg(logger_name, spdlog::level::info, "ignored");
+    spdlog::details::log_msg msg(logger_name, spdlog::level::info, nullptr, "ignored");
     memory_buf_t formatted;
     formatter->format(msg, formatted);
     REQUIRE(msg.color_range_start == 0);
@@ -101,7 +101,7 @@ TEST_CASE("color range test4", "[pattern_formatter]")
 {
     auto formatter = std::make_shared<spdlog::pattern_formatter>("XX%^YYY%$", spdlog::pattern_time_type::local, "\n");
     std::string logger_name = "test";
-    spdlog::details::log_msg msg(logger_name, spdlog::level::info, "ignored");
+    spdlog::details::log_msg msg(logger_name, spdlog::level::info, nullptr, "ignored");
 
     memory_buf_t formatted;
     formatter->format(msg, formatted);
@@ -114,7 +114,7 @@ TEST_CASE("color range test5", "[pattern_formatter]")
 {
     auto formatter = std::make_shared<spdlog::pattern_formatter>("**%^");
     std::string logger_name = "test";
-    spdlog::details::log_msg msg(logger_name, spdlog::level::info, "ignored");
+    spdlog::details::log_msg msg(logger_name, spdlog::level::info, nullptr, "ignored");
     memory_buf_t formatted;
     formatter->format(msg, formatted);
     REQUIRE(msg.color_range_start == 2);
@@ -125,7 +125,7 @@ TEST_CASE("color range test6", "[pattern_formatter]")
 {
     auto formatter = std::make_shared<spdlog::pattern_formatter>("**%$");
     std::string logger_name = "test";
-    spdlog::details::log_msg msg(logger_name, spdlog::level::info, "ignored");
+    spdlog::details::log_msg msg(logger_name, spdlog::level::info, nullptr, "ignored");
     memory_buf_t formatted;
     formatter->format(msg, formatted);
     REQUIRE(msg.color_range_start == 0);
@@ -235,10 +235,10 @@ TEST_CASE("paddinng_truncate_funcname", "[pattern_formatter]")
     auto formatter = std::unique_ptr<spdlog::formatter>(new spdlog::pattern_formatter(pattern));
     test_sink.set_formatter(std::move(formatter));
 
-    spdlog::details::log_msg msg1{spdlog::source_loc{"ignored", 1, "func"}, "test_logger", spdlog::level::info, "message"};
+    spdlog::details::log_msg msg1{spdlog::source_loc{"ignored", 1, "func"}, "test_logger", spdlog::level::info, nullptr, "message"};
     test_sink.log(msg1);
 
-    spdlog::details::log_msg msg2{spdlog::source_loc{"ignored", 1, "function"}, "test_logger", spdlog::level::info, "message"};
+    spdlog::details::log_msg msg2{spdlog::source_loc{"ignored", 1, "function"}, "test_logger", spdlog::level::info, nullptr, "message"};
     test_sink.log(msg2);
 
     auto lines = test_sink.lines();
@@ -251,7 +251,7 @@ TEST_CASE("clone-default-formatter", "[pattern_formatter]")
     auto formatter_1 = std::make_shared<spdlog::pattern_formatter>();
     auto formatter_2 = formatter_1->clone();
     std::string logger_name = "test";
-    spdlog::details::log_msg msg(logger_name, spdlog::level::info, "some message");
+    spdlog::details::log_msg msg(logger_name, spdlog::level::info, nullptr, "some message");
 
     memory_buf_t formatted_1;
     memory_buf_t formatted_2;
@@ -266,7 +266,7 @@ TEST_CASE("clone-default-formatter2", "[pattern_formatter]")
     auto formatter_1 = std::make_shared<spdlog::pattern_formatter>("%+");
     auto formatter_2 = formatter_1->clone();
     std::string logger_name = "test";
-    spdlog::details::log_msg msg(logger_name, spdlog::level::info, "some message");
+    spdlog::details::log_msg msg(logger_name, spdlog::level::info, nullptr, "some message");
 
     memory_buf_t formatted_1;
     memory_buf_t formatted_2;
@@ -281,7 +281,7 @@ TEST_CASE("clone-formatter", "[pattern_formatter]")
     auto formatter_1 = std::make_shared<spdlog::pattern_formatter>("%D %X [%] [%n] %v");
     auto formatter_2 = formatter_1->clone();
     std::string logger_name = "test";
-    spdlog::details::log_msg msg(logger_name, spdlog::level::info, "some message");
+    spdlog::details::log_msg msg(logger_name, spdlog::level::info, nullptr, "some message");
 
     memory_buf_t formatted_1;
     memory_buf_t formatted_2;
@@ -296,7 +296,7 @@ TEST_CASE("clone-formatter-2", "[pattern_formatter]")
     auto formatter_1 = std::make_shared<spdlog::pattern_formatter>("%D %X [%] [%n] %v", pattern_time_type::utc, "xxxxxx\n");
     auto formatter_2 = formatter_1->clone();
     std::string logger_name = "test2";
-    spdlog::details::log_msg msg(logger_name, spdlog::level::info, "some message");
+    spdlog::details::log_msg msg(logger_name, spdlog::level::info, nullptr, "some message");
 
     memory_buf_t formatted_1;
     memory_buf_t formatted_2;
@@ -321,7 +321,7 @@ TEST_CASE("short filename formatter-1", "[pattern_formatter]")
     memory_buf_t formatted;
     std::string logger_name = "logger-name";
     spdlog::source_loc source_loc{test_path, 123, "some_func()"};
-    spdlog::details::log_msg msg(source_loc, "logger-name", spdlog::level::info, "Hello");
+    spdlog::details::log_msg msg(source_loc, "logger-name", spdlog::level::info, nullptr, "Hello");
     formatter.format(msg, formatted);
     REQUIRE(fmt::to_string(formatted) == "myfile.cpp");
 }
@@ -332,7 +332,7 @@ TEST_CASE("short filename formatter-2", "[pattern_formatter]")
     memory_buf_t formatted;
     std::string logger_name = "logger-name";
     spdlog::source_loc source_loc{"myfile.cpp", 123, "some_func()"};
-    spdlog::details::log_msg msg(source_loc, "logger-name", spdlog::level::info, "Hello");
+    spdlog::details::log_msg msg(source_loc, "logger-name", spdlog::level::info, nullptr, "Hello");
     formatter.format(msg, formatted);
     REQUIRE(fmt::to_string(formatted) == "myfile.cpp:123");
 }
@@ -343,7 +343,7 @@ TEST_CASE("short filename formatter-3", "[pattern_formatter]")
     memory_buf_t formatted;
     std::string logger_name = "logger-name";
     spdlog::source_loc source_loc{"", 123, "some_func()"};
-    spdlog::details::log_msg msg(source_loc, "logger-name", spdlog::level::info, "Hello");
+    spdlog::details::log_msg msg(source_loc, "logger-name", spdlog::level::info, nullptr, "Hello");
     formatter.format(msg, formatted);
     REQUIRE(fmt::to_string(formatted) == " Hello");
 }
@@ -354,7 +354,7 @@ TEST_CASE("full filename formatter", "[pattern_formatter]")
     memory_buf_t formatted;
     std::string logger_name = "logger-name";
     spdlog::source_loc source_loc{test_path, 123, "some_func()"};
-    spdlog::details::log_msg msg(source_loc, "logger-name", spdlog::level::info, "Hello");
+    spdlog::details::log_msg msg(source_loc, "logger-name", spdlog::level::info, nullptr, "Hello");
     formatter.format(msg, formatted);
     REQUIRE(fmt::to_string(formatted) == test_path);
 }

@@ -13,6 +13,7 @@ set(SPDLOG_UTESTS_SOURCES
 	test_daily_logger.cpp
     test_misc.cpp
     test_pattern_formatter.cpp
+    test_json_formatter.cpp
     test_async.cpp
     test_registry.cpp
     test_macros.cpp

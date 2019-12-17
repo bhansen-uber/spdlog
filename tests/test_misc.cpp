@@ -142,6 +142,106 @@ TEST_CASE("clone async", "[clone]")
     spdlog::drop_all();
 }
 
+#ifndef NO_STRUCTURED_LOGGING
+
+class test_field_formatter : public spdlog::formatter
+{
+public:
+    test_field_formatter() {}
+
+    void format(const spdlog::details::log_msg &msg, spdlog::memory_buf_t &dest) override
+    {
+        bool first = true;
+
+        for (const auto & entry : msg.entries)
+        {
+           if (!first)
+           {
+                const char * sep = ":";
+                dest.append(sep, sep + 1);
+            }
+            first = false;
+            dest.append(entry.value.c_str(), entry.value.c_str() + entry.value.size());
+        }
+
+        if (msg.shared_entries)
+        {
+            for (const auto & entry : *msg.shared_entries)
+            {
+                if (!first)
+                {
+                    const char * sep = ":";
+                    dest.append(sep, sep + 1);
+                }
+                first = false;
+                dest.append(entry.value.c_str(), entry.value.c_str() + entry.value.size());
+            }
+        }
+    }
+
+    std::unique_ptr<spdlog::formatter> clone() const override {return std::make_unique<test_field_formatter>(); }
+};
+
+TEST_CASE("constructed scope 1", "[structured_logging]")
+{
+    using namespace spdlog;
+
+    std::ostringstream oss;
+    auto oss_sink = std::make_shared<spdlog::sinks::ostream_sink_mt>(oss);
+    oss_sink->set_formatter(std::make_unique<test_field_formatter>());
+
+    auto orig_logger = std::make_shared<spdlog::logger>("orig", oss_sink);
+    auto logger = orig_logger->scope("test",
+        {field_entry("msg","%v",true)}
+    );
+
+    logger->info("test");
+    auto output = oss.str();
+
+    REQUIRE(ends_with(output, "%v"));
+}
+
+TEST_CASE("constructed scope 2", "[structured_logging]")
+{
+    using namespace spdlog;
+
+    std::ostringstream oss;
+    auto oss_sink = std::make_shared<spdlog::sinks::ostream_sink_mt>(oss);
+    oss_sink->set_formatter(std::make_unique<test_field_formatter>());
+
+    auto orig_logger = std::make_shared<spdlog::logger>("orig", oss_sink);
+    auto logger = orig_logger->scope("test", {
+        field_entry("msg","%v",true),
+        field_entry("msg2","2")
+    });
+
+    logger->info("test");
+    auto output = oss.str();
+    REQUIRE(ends_with(output, "%v:2"));
+}
+
+TEST_CASE("constructed scope 3", "[structured_logging]")
+{
+    using namespace spdlog;
+
+    std::ostringstream oss;
+    auto oss_sink = std::make_shared<spdlog::sinks::ostream_sink_mt>(oss);
+    oss_sink->set_formatter(std::make_unique<test_field_formatter>());
+
+    auto orig_logger = std::make_shared<spdlog::logger>("orig", oss_sink);
+    auto logger = orig_logger->scope("test", {
+        field_entry("msg","%v",true),
+        field_entry("msg2","2"),
+        field_entry("msg3","3")
+    });
+
+    logger->info("test");
+    auto output = oss.str();
+    REQUIRE(ends_with(output, "%v:2:3"));
+}
+
+#endif
+
 TEST_CASE("to_hex", "[to_hex]")
 {
     std::ostringstream oss;

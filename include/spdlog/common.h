@@ -103,6 +103,32 @@ using err_handler = std::function<void(const std::string &err_msg)>;
 using string_view_t = fmt::basic_string_view<char>;
 using wstring_view_t = fmt::basic_string_view<wchar_t>;
 using memory_buf_t = fmt::basic_memory_buffer<char, 250>;
+#ifndef SPDLOG_NO_STRUCTURED_LOGGING
+//TODO(bhansen): start using string_literals where we can
+struct string_literal_t : public fmt::basic_string_view<char>
+{
+    template<int N>
+    string_literal_t(const char(&str)[N]) : fmt::basic_string_view<char>(str, N - 1)
+    {}
+};
+
+struct field_entry {
+    //TODO(bhansen): we should be able to make these into basic_memory_buffers and string_literal_ts.
+    std::string name;
+    std::string value;
+    bool pattern;
+
+    template<typename N, typename V>
+    field_entry(const N& field_name, const V& field_value, bool interpret_value_pattern = false) :
+        name(fmt::format("{}", field_name)), value(fmt::format("{}", field_value)), pattern(interpret_value_pattern)
+    {
+    }
+};
+using field_entries = std::vector<field_entry>;
+#else
+using field_entries = std::monostate;
+#endif
+using field_entries_ptr = std::shared_ptr<field_entries>;
 
 #ifdef SPDLOG_WCHAR_TO_UTF8_SUPPORT
 #ifndef _WIN32

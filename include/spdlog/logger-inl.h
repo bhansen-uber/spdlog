@@ -23,6 +23,7 @@ SPDLOG_INLINE logger::logger(const logger &other)
     , flush_level_(other.flush_level_.load(std::memory_order_relaxed))
     , custom_err_handler_(other.custom_err_handler_)
     , tracer_(other.tracer_)
+    , scoped_fields_(other.scoped_fields_)
 {}
 
 SPDLOG_INLINE logger::logger(logger &&other) SPDLOG_NOEXCEPT : name_(std::move(other.name_)),
@@ -30,7 +31,8 @@ SPDLOG_INLINE logger::logger(logger &&other) SPDLOG_NOEXCEPT : name_(std::move(o
                                                                level_(other.level_.load(std::memory_order_relaxed)),
                                                                flush_level_(other.flush_level_.load(std::memory_order_relaxed)),
                                                                custom_err_handler_(std::move(other.custom_err_handler_)),
-                                                               tracer_(std::move(other.tracer_))
+                                                               tracer_(std::move(other.tracer_)),
+                                                               scoped_fields_(std::move(other.scoped_fields_))
 
 {}
 
@@ -57,6 +59,8 @@ SPDLOG_INLINE void logger::swap(spdlog::logger &other) SPDLOG_NOEXCEPT
 
     custom_err_handler_.swap(other.custom_err_handler_);
     std::swap(tracer_, other.tracer_);
+
+    std::swap(scoped_fields_, other.scoped_fields_);
 }
 
 SPDLOG_INLINE void swap(logger &a, logger &b)
@@ -211,9 +215,9 @@ SPDLOG_INLINE void logger::dump_backtrace_()
     using details::log_msg;
     if (tracer_.enabled())
     {
-        sink_it_(log_msg{name(), level::info, "****************** Backtrace Start ******************"});
+        sink_it_(log_msg{name(), level::info, nullptr, "****************** Backtrace Start ******************"});
         tracer_.foreach_pop([this](const log_msg &msg) { this->sink_it_(msg); });
-        sink_it_(log_msg{name(), level::info, "****************** Backtrace End ********************"});
+        sink_it_(log_msg{name(), level::info, nullptr, "****************** Backtrace End ********************"});
     }
 }
 

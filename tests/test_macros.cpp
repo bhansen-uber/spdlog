@@ -35,6 +35,43 @@ TEST_CASE("debug and trace w/o format string", "[macros]]")
     REQUIRE(count_lines(filename) == 2);
 }
 
+#ifndef SPDLOG_NO_STRUCTURED_LOGGING
+
+namespace tags {
+constexpr char FIELD_1[] = "field1";
+constexpr char FIELD_2[] = "field2";
+}
+
+using namespace spdlog;
+
+TEST_CASE("debug and trace w/ structured fields", "[macros]]")
+{
+
+    prepare_logdir();
+    std::string filename = "test_logs/simple_log";
+
+    auto logger = spdlog::create<sinks::basic_file_sink_mt>("logger", filename);
+    logger->set_pattern("%v");
+    logger->set_level(level::trace);
+
+    SPDLOG_LOGGER_TRACE(logger, "Test message 1", {tags::FIELD_1, 1});
+    SPDLOG_LOGGER_DEBUG(logger, "Test message 2", {tags::FIELD_2, spdlog::string_literal_t("2")});
+    logger->flush();
+
+    REQUIRE(ends_with(file_contents(filename), "Test message 2\n"));
+    REQUIRE(count_lines(filename) == 1);
+
+    set_default_logger(logger);
+
+    SPDLOG_TRACE("Test message 3", {tags::FIELD_1, 1});
+    SPDLOG_DEBUG("Test message 4", {tags::FIELD_2, "2"});
+    logger->flush();
+
+    REQUIRE(ends_with(file_contents(filename), "Test message 4\n"));
+    REQUIRE(count_lines(filename) == 2);
+}
+#endif
+
 TEST_CASE("disable param evaluation", "[macros]")
 {
     SPDLOG_TRACE("Test message {}", throw std::runtime_error("Should not be evaluated"));

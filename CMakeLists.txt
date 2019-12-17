@@ -25,17 +25,9 @@ message(STATUS "Build spdlog: ${SPDLOG_VERSION}")
 #---------------------------------------------------------------------------------------
 # Compiler config
 #---------------------------------------------------------------------------------------
-if (NOT CMAKE_CXX_STANDARD)
-    set(CMAKE_CXX_STANDARD 11)
-    set(CMAKE_CXX_STANDARD_REQUIRED ON)
-endif()
-
-set(CMAKE_CXX_EXTENSIONS  OFF)
-
-if(CMAKE_SYSTEM_NAME MATCHES "CYGWIN")
-	set(CMAKE_CXX_EXTENSIONS ON)
-endif()
-
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 #---------------------------------------------------------------------------------------
 # Set SPDLOG_MASTER_PROJECT to ON if we are building spdlog
@@ -91,6 +83,7 @@ option(SPDLOG_PREVENT_CHILD_FD "Prevent from child processes to inherit log file
 option(SPDLOG_NO_THREAD_ID "prevent spdlog from querying the thread id on each log call if thread id is not needed" OFF)
 option(SPDLOG_NO_TLS "prevent spdlog from using thread local storage" OFF)
 option(SPDLOG_NO_ATOMIC_LEVELS "prevent spdlog from using of std::atomic log levels (use only if your code never modifies log levels concurrently" OFF)
+option(SPDLOG_NO_STRUCTURED_LOGGING "prevent spdlog from emitting structured log information" OFF)
 
 find_package(Threads REQUIRED)
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
@@ -210,6 +203,11 @@ endif()
 if(SPDLOG_NO_ATOMIC_LEVELS)
     target_compile_definitions(spdlog PUBLIC SPDLOG_NO_ATOMIC_LEVELS)
     target_compile_definitions(spdlog_header_only INTERFACE SPDLOG_NO_ATOMIC_LEVELS)
+endif()
+
+if (SPDLOG_NO_STRUCTURED_LOGGING)
+    target_compile_definitions(spdlog PRIVATE SPDLOG_NO_STRUCTURED_LOGGING)
+    target_compile_definitions(spdlog_header_only INTERFACE SPDLOG_NO_STRUCTURED_LOGGING)
 endif()
 
 

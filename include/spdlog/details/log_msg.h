@@ -11,12 +11,16 @@ namespace details {
 struct log_msg
 {
     log_msg() = default;
-    log_msg(source_loc loc, string_view_t logger_name, level::level_enum lvl, string_view_t msg);
-    log_msg(string_view_t logger_name, level::level_enum lvl, string_view_t msg);
+    log_msg(source_loc loc, string_view_t logger_name, level::level_enum lvl, field_entries_ptr shared_entries, string_view_t msg);
+    log_msg(string_view_t logger_name, level::level_enum lvl, field_entries_ptr shared_entries, string_view_t msg);
+    log_msg(source_loc loc, string_view_t logger_name, level::level_enum lvl, field_entries &src_entries, field_entries_ptr shared_entries, string_view_t msg);
+    log_msg(string_view_t logger_name, level::level_enum lvl, field_entries &src_entries, field_entries_ptr shared_entries, string_view_t msg);
     log_msg(const log_msg &other) = default;
 
     string_view_t logger_name;
     level::level_enum level{level::off};
+    field_entries entries;
+    field_entries_ptr shared_entries;
     log_clock::time_point time;
     size_t thread_id{0};
 

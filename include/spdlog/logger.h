@@ -73,6 +73,77 @@ public:
 
     void swap(spdlog::logger &other) SPDLOG_NOEXCEPT;
 
+#ifndef SPDLOG_NO_STRUCTURED_LOGGING
+    // Create scoped loggers
+    // TODO(bhansen): these should be copying the data into a single buffer and constructing string_view_t objects
+    //    referencing the data.  That should limit us to two allocations per scope statement: the buffer of stringified
+    //    objects and the vector of string_view_t's
+    template<std::size_t size>
+    using entry_array = field_entry[size];
+
+    template<std::size_t size>
+    std::shared_ptr<logger> scope(const std::string & name, entry_array<size> && inputs)
+    {
+        //TODO(bhansen) - scope should take a name
+        auto result = clone(name);
+
+        result->scoped_fields_ = std::make_shared<field_entries>(
+            std::move_iterator(std::begin(inputs)), std::move_iterator(std::end(inputs)));
+        return result;
+    }
+
+    std::shared_ptr<logger> scope(const std::string &name, const field_entries & inputs)
+    {
+        //TODO(bhansen) - scope should take a name
+        auto result = clone(name);
+        result->scoped_fields_ = std::make_shared<field_entries>(inputs);
+        return result;
+    }
+
+    // Consume the field_entries
+
+    // TODO: recurse through the entries, build the vector at the end with the correct number of
+    //   results, then fill them in as we walk back up the stack so there's never a re-allocation
+    // TODO(bhansen): these should be copying the data into a single buffer and constructing string_view_t objects
+    //    referencing the data.  That should limit us to three allocations per log statement: the buffer of stringified
+    //    objects, the vector of string_view_t's, and the actual formatted output.
+    template<typename... Args>
+    void log(source_loc loc, level::level_enum lvl, string_view_t fmt, field_entry e, const Args &... args)
+    {
+        field_entries entries;
+        entries.emplace_back(std::move(e));
+        log(loc, lvl, fmt, entries, args...);
+    }
+
+    template<typename... Args>
+    void log(source_loc loc, level::level_enum lvl, string_view_t fmt, field_entries &entries, field_entry e, const Args &... args)
+    {
+        entries.emplace_back(std::move(e));
+        log(loc, lvl, fmt, entries, args...);
+    }
+
+    template<typename... Args>
+    void log(source_loc loc, level::level_enum lvl, string_view_t fmt, field_entries &entries)
+    {
+        bool log_enabled = should_log(lvl);
+        bool traceback_enabled = tracer_.enabled();
+        if (!log_enabled && !traceback_enabled)
+        {
+            return;
+        }
+        SPDLOG_TRY
+        {
+            memory_buf_t buf;
+            fmt::format_to(buf, fmt);
+            details::log_msg log_msg(loc, name_, lvl, entries, scoped_fields_, string_view_t(buf.data(), buf.size()));
+            log_it_(log_msg, log_enabled, traceback_enabled);
+        }
+        SPDLOG_LOGGER_CATCH()
+    }
+
+#endif
+
+
     template<typename... Args>
     void log(source_loc loc, level::level_enum lvl, string_view_t fmt, const Args &... args)
     {
@@ -86,7 +157,7 @@ public:
         {
             memory_buf_t buf;
             fmt::format_to(buf, fmt, args...);
-            details::log_msg log_msg(loc, name_, lvl, string_view_t(buf.data(), buf.size()));
+            details::log_msg log_msg(loc, name_, lvl, scoped_fields_, string_view_t(buf.data(), buf.size()));
             log_it_(log_msg, log_enabled, traceback_enabled);
         }
         SPDLOG_LOGGER_CATCH()
@@ -151,7 +222,7 @@ public:
             return;
         }
 
-        details::log_msg log_msg(loc, name_, lvl, msg);
+        details::log_msg log_msg(loc, name_, lvl, scoped_fields_, msg);
         log_it_(log_msg, log_enabled, traceback_enabled);
     }
 
@@ -227,7 +298,7 @@ public:
 
             memory_buf_t buf;
             details::os::wstr_to_utf8buf(wstring_view_t(wbuf.data(), wbuf.size()), buf);
-            details::log_msg log_msg(loc, name_, lvl, string_view_t(buf.data(), buf.size()));
+            details::log_msg log_msg(loc, name_, lvl, scoped_fields_, string_view_t(buf.data(), buf.size()));
             log_it_(log_msg, log_enabled, traceback_enabled);
         }
         SPDLOG_LOGGER_CATCH()
@@ -290,7 +361,7 @@ public:
         {
             memory_buf_t buf;
             details::os::wstr_to_utf8buf(msg, buf);
-            details::log_msg log_msg(loc, name_, lvl, string_view_t(buf.data(), buf.size()));
+            details::log_msg log_msg(loc, name_, lvl, scoped_fields_, string_view_t(buf.data(), buf.size()));
             log_it_(log_msg, log_enabled, traceback_enabled);
         }
         SPDLOG_LOGGER_CATCH()
@@ -351,6 +422,7 @@ protected:
     spdlog::level_t flush_level_{level::off};
     err_handler custom_err_handler_{nullptr};
     details::backtracer tracer_;
+    field_entries_ptr scoped_fields_;
 
     // log the given message (if the given log level is high enough),
     // and save backtrace (if backtrace is enabled).
