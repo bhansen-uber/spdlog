@@ -25,9 +25,17 @@ message(STATUS "Build spdlog: ${SPDLOG_VERSION}")
 #---------------------------------------------------------------------------------------
 # Compiler config
 #---------------------------------------------------------------------------------------
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+if (NOT CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD 17)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+endif()
+
+set(CMAKE_CXX_EXTENSIONS  OFF)
+
+if(CMAKE_SYSTEM_NAME MATCHES "CYGWIN")
+       set(CMAKE_CXX_EXTENSIONS ON)
+endif()
+
 
 #---------------------------------------------------------------------------------------
 # Set SPDLOG_MASTER_PROJECT to ON if we are building spdlog
@@ -171,7 +179,7 @@ if(SPDLOG_WCHAR_SUPPORT)
  endif()
 
  if(SPDLOG_NO_EXCEPTIONS)
-	target_compile_definitions(spdlog PUBLIC SPDLOG_NO_EXCEPTIONS)	
+	target_compile_definitions(spdlog PUBLIC SPDLOG_NO_EXCEPTIONS)
 
 	target_compile_definitions(spdlog_header_only INTERFACE SPDLOG_NO_EXCEPTIONS)
 
