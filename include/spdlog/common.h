@@ -14,6 +14,7 @@
 #include <string>
 #include <type_traits>
 #include <functional>
+#include <utility>
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -124,7 +125,26 @@ struct field_entry {
     {
     }
 };
+
+template<std::size_t size>
+using field_entry_array = field_entry[size];
 using field_entries = std::vector<field_entry>;
+
+// Prefix entries with f_ as a shorthand.  Note that this is the most efficient form if passing
+//    multiple fields
+//    e.g. _f( {{"foo", "bar"}, {"foo2", "bar2"}} )
+template<std::size_t size>
+field_entry_array<size>&& f_(field_entry_array<size> &&arr) { return std::forward<field_entry_array<size>>(arr); }
+
+// Prefix single entry with f_ as a shorthand
+//    e.g. _f( {"foo", "bar"} )
+inline field_entry f_(field_entry && entry) { return std::move(entry); }
+
+// Prefix single entry values with f_ as a shorthand
+//    e.g. _f("foo", "bar")
+template<typename N, typename V>
+field_entry f_(N n, V v) { return field_entry(std::forward<N>(n), std::forward<V>(v)); }
+
 #else
 using field_entries = std::monostate;
 #endif

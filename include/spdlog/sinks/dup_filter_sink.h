@@ -64,8 +64,7 @@ protected:
         {
             memory_buf_t buf;
             fmt::format_to(buf, "Skipped {} duplicate messages..", skip_counter_);
-            field_entries entries(msg.entries);
-            details::log_msg skipped_msg{msg.logger_name, msg.level, entries, msg.shared_entries, string_view_t{buf.data(), buf.size()}};
+            details::log_msg skipped_msg{msg.logger_name, msg.level, field_entries(msg.entries), msg.shared_entries, string_view_t{buf.data(), buf.size()}};
             dist_sink<Mutex>::sink_it_(skipped_msg);
         }
 
@@ -80,7 +79,7 @@ protected:
     bool filter_(const details::log_msg &msg)
     {
         auto filter_duration = msg.time - last_msg_time_;
-        // TODO(bhansen): check that the entries are the same also
+        // TODO(bhansen): check that the entries and shared_entries are the same also
         return (filter_duration > max_skip_duration_) || (msg.payload != last_msg_payload_);
     }
 };

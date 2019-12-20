@@ -1,5 +1,6 @@
 #include "includes.h"
 #include "test_sink.h"
+#include "test_field_formatter.h"
 #include "spdlog/fmt/bin_to_hex.h"
 
 template<class T>
@@ -144,44 +145,6 @@ TEST_CASE("clone async", "[clone]")
 
 #ifndef NO_STRUCTURED_LOGGING
 
-class test_field_formatter : public spdlog::formatter
-{
-public:
-    test_field_formatter() {}
-
-    void format(const spdlog::details::log_msg &msg, spdlog::memory_buf_t &dest) override
-    {
-        bool first = true;
-
-        for (const auto & entry : msg.entries)
-        {
-           if (!first)
-           {
-                const char * sep = ":";
-                dest.append(sep, sep + 1);
-            }
-            first = false;
-            dest.append(entry.value.c_str(), entry.value.c_str() + entry.value.size());
-        }
-
-        if (msg.shared_entries)
-        {
-            for (const auto & entry : *msg.shared_entries)
-            {
-                if (!first)
-                {
-                    const char * sep = ":";
-                    dest.append(sep, sep + 1);
-                }
-                first = false;
-                dest.append(entry.value.c_str(), entry.value.c_str() + entry.value.size());
-            }
-        }
-    }
-
-    std::unique_ptr<spdlog::formatter> clone() const override {return std::make_unique<test_field_formatter>(); }
-};
-
 TEST_CASE("constructed scope 1", "[structured_logging]")
 {
     using namespace spdlog;
@@ -196,9 +159,8 @@ TEST_CASE("constructed scope 1", "[structured_logging]")
     );
 
     logger->info("test");
-    auto output = oss.str();
 
-    REQUIRE(ends_with(output, "%v"));
+    REQUIRE(oss.str() == "test:%v");
 }
 
 TEST_CASE("constructed scope 2", "[structured_logging]")
@@ -216,8 +178,7 @@ TEST_CASE("constructed scope 2", "[structured_logging]")
     });
 
     logger->info("test");
-    auto output = oss.str();
-    REQUIRE(ends_with(output, "%v:2"));
+    REQUIRE(oss.str() == "test:%v:2");
 }
 
 TEST_CASE("constructed scope 3", "[structured_logging]")
@@ -236,8 +197,92 @@ TEST_CASE("constructed scope 3", "[structured_logging]")
     });
 
     logger->info("test");
+    REQUIRE(oss.str() == "test:%v:2:3");
+}
+
+TEST_CASE("implicit scope", "[structured_logging]")
+{
+    using namespace spdlog;
+
+    std::ostringstream oss;
+    auto oss_sink = std::make_shared<spdlog::sinks::ostream_sink_mt>(oss);
+    oss_sink->set_formatter(std::make_unique<test_field_formatter>());
+
+    auto orig_logger = std::make_shared<spdlog::logger>("orig", oss_sink);
+    auto logger = orig_logger->scope("test", {
+        {"msg","%v",true},
+        {"msg2","2"},
+        {"msg3","3"}
+    });
+
+    logger->info("test");
     auto output = oss.str();
-    REQUIRE(ends_with(output, "%v:2:3"));
+    REQUIRE(oss.str() == "test:%v:2:3");
+}
+
+TEST_CASE("log with fields", "[structured_logging]")
+{
+    using namespace spdlog;
+
+    std::ostringstream oss;
+    auto oss_sink = std::make_shared<spdlog::sinks::ostream_sink_mt>(oss);
+    oss_sink->set_formatter(std::make_unique<test_field_formatter>());
+
+    auto logger = std::make_shared<spdlog::logger>("orig", oss_sink);
+
+    int count = 1;
+
+    //
+    // Test various ways of passing in fields to log messages
+    //
+    logger->info("msg");
+    REQUIRE(oss.str() == "msg");
+    oss.str("");
+
+    //
+    // Passing in single entries
+    //
+
+    // // Explicit single entries
+    logger->info("msg", spdlog::field_entry{"count", count});
+    REQUIRE(oss.str() == "msg:1");
+    oss.str("");
+
+    logger->info("msg", spdlog::field_entry{"count", count}, spdlog::field_entry{"count", count});
+    REQUIRE(oss.str() == "msg:1:1");
+    oss.str("");
+
+    // f_ single entries
+    logger->info("msg", f_("count", count));
+    REQUIRE(oss.str() == "msg:1");
+    oss.str("");
+
+    logger->info("msg", f_("count", count), f_("count", count));
+    REQUIRE(oss.str() == "msg:1:1");
+    oss.str("");
+
+    // Explicit call to all-parameters logs
+    logger->log(spdlog::source_loc{}, spdlog::level::info, "msg", f_("count", count));
+    REQUIRE(oss.str() == "msg:1");
+    oss.str("");
+
+    //
+    // Passing multiple entries
+    //
+
+    // Array initializer
+    logger->info("msg", f_({{"count1", count}, {"count2", count}, {"count3", count}}));
+    REQUIRE(oss.str() == "msg:1:1:1");
+    oss.str("");
+
+    logger->log(spdlog::source_loc{}, spdlog::level::info, "msg", f_("count", count), f_("count", count));
+    REQUIRE(oss.str() == "msg:1:1");
+    oss.str("");
+
+    // Can't make these work
+    // logger->info("msg", {"count", count}, {"count", count});
+    // logger->info("msg", {{"count", count}, {"count", count}});
+    // logger->info("msg", f_({"count1", count}, {"count2", count}, {"count3", count});
 }
 
 #endif

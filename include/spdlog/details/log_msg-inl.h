@@ -32,11 +32,11 @@ SPDLOG_INLINE log_msg::log_msg(string_view_t a_logger_name, spdlog::level::level
 {}
 
 SPDLOG_INLINE log_msg::log_msg(
-    spdlog::source_loc loc, string_view_t a_logger_name, spdlog::level::level_enum lvl, field_entries &src_entries, field_entries_ptr shared_entries, spdlog::string_view_t msg)
+    spdlog::source_loc loc, string_view_t a_logger_name, spdlog::level::level_enum lvl, field_entries &&src_entries, field_entries_ptr shared_entries, spdlog::string_view_t msg)
     : logger_name(a_logger_name)
     , level(lvl)
 #ifndef SPDLOG_NO_STRUCTURED_LOGGING
-    , entries(std::move(src_entries))
+    , entries(src_entries)
     , shared_entries(shared_entries)
 #endif
     , time(os::now())
@@ -48,8 +48,8 @@ SPDLOG_INLINE log_msg::log_msg(
 {}
 
 SPDLOG_INLINE log_msg::log_msg(
-    string_view_t a_logger_name, spdlog::level::level_enum lvl, field_entries &src_entries, field_entries_ptr shared_entries, spdlog::string_view_t msg)
-    : log_msg(source_loc{}, a_logger_name, lvl, src_entries, shared_entries, msg)
+    string_view_t a_logger_name, spdlog::level::level_enum lvl, field_entries &&src_entries, field_entries_ptr shared_entries, spdlog::string_view_t msg)
+    : log_msg(source_loc{}, a_logger_name, lvl, std::move(src_entries), shared_entries, msg)
 {}
 
 } // namespace details

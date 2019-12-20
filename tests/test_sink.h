@@ -46,6 +46,14 @@ public:
         return lines_;
     }
 
+    void reset_output()
+    {
+        std::lock_guard<Mutex> lock(base_sink<Mutex>::mutex_);
+        lines_.clear();
+        msg_counter_ = 0;
+        flush_counter_ = 0;
+    }
+
 protected:
     void sink_it_(const details::log_msg &msg) override
     {

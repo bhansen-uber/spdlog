@@ -3,6 +3,9 @@
  */
 
 #include "includes.h"
+#include "test_field_formatter.h"
+#include "test_sink.h"
+#include "utils.h"
 
 #if SPDLOG_ACTIVE_LEVEL != SPDLOG_LEVEL_DEBUG
 #error "Invalid SPDLOG_ACTIVE_LEVEL in test. Should be SPDLOG_LEVEL_DEBUG"
@@ -46,29 +49,28 @@ using namespace spdlog;
 
 TEST_CASE("debug and trace w/ structured fields", "[macros]]")
 {
+    std::ostringstream oss;
+    auto test_sink = std::make_shared<sinks::test_sink_st>();
+    test_sink->set_formatter(std::make_unique<test_field_formatter>(details::os::default_eol));
 
-    prepare_logdir();
-    std::string filename = "test_logs/simple_log";
-
-    auto logger = spdlog::create<sinks::basic_file_sink_mt>("logger", filename);
-    logger->set_pattern("%v");
+    auto logger = std::make_shared<spdlog::logger>("orig", test_sink);
     logger->set_level(level::trace);
 
-    SPDLOG_LOGGER_TRACE(logger, "Test message 1", {tags::FIELD_1, 1});
-    SPDLOG_LOGGER_DEBUG(logger, "Test message 2", {tags::FIELD_2, spdlog::string_literal_t("2")});
+    SPDLOG_LOGGER_TRACE(logger, "Test message 1", f_(tags::FIELD_1, 1));
+    SPDLOG_LOGGER_DEBUG(logger, "Test message 2", f_(tags::FIELD_2, 2));
     logger->flush();
 
-    REQUIRE(ends_with(file_contents(filename), "Test message 2\n"));
-    REQUIRE(count_lines(filename) == 1);
+    REQUIRE(test_sink->msg_counter() == 1);
+    REQUIRE(test_sink->lines()[0] == "Test message 2:2");
 
+    test_sink->reset_output();
     set_default_logger(logger);
 
-    SPDLOG_TRACE("Test message 3", {tags::FIELD_1, 1});
-    SPDLOG_DEBUG("Test message 4", {tags::FIELD_2, "2"});
+    SPDLOG_DEBUG("Test message 3", f_(tags::FIELD_1, 1));
+    SPDLOG_TRACE("Test message 4", f_(tags::FIELD_2, 2));
     logger->flush();
-
-    REQUIRE(ends_with(file_contents(filename), "Test message 4\n"));
-    REQUIRE(count_lines(filename) == 2);
+    REQUIRE(test_sink->lines().size() == 1);
+    REQUIRE(test_sink->lines()[0] == "Test message 3:1");
 }
 #endif
 
